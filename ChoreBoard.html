@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Family Chore Board</title>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Nunito', sans-serif;
+      background: linear-gradient(135deg, #FF6B6B 0%, #FFE66D 50%, #4ECDC4 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+      color: #fff;
+      font-size: 2.5rem;
+      font-weight: 800;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+      margin-bottom: 10px;
+    }
+    .subtitle {
+      text-align: center;
+      color: rgba(255,255,255,0.9);
+      font-size: 1.2rem;
+      margin-bottom: 30px;
+    }
+    .progress-bar {
+      max-width: 400px;
+      margin: 0 auto 30px;
+      background: rgba(255,255,255,0.3);
+      border-radius: 20px;
+      padding: 4px;
+    }
+    .progress-fill {
+      height: 24px;
+      background: linear-gradient(90deg, #6BCB77, #4ECDC4);
+      border-radius: 16px;
+      transition: width 0.5s ease;
+      text-align: center;
+      color: white;
+      font-weight: 700;
+      font-size: 0.9rem;
+      line-height: 24px;
+    }
+    .board {
+      display: flex;
+      gap: 20px;
+      max-width: 1000px;
+      margin: 0 auto;
+      overflow-x: auto;
+      padding-bottom: 20px;
+    }
+    .column {
+      flex: 1;
+      min-width: 280px;
+      background: rgba(255,255,255,0.95);
+      border-radius: 20px;
+      padding: 20px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+    .column h2 {
+      font-size: 1.4rem;
+      margin-bottom: 15px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .column.todo h2 { color: #FF6B6B; }
+    .column.doing h2 { color: #FFE66D; }
+    .column.done h2 { color: #6BCB77; }
+    .emoji { font-size: 1.5rem; }
+    .add-chore {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .add-chore input {
+      flex: 1;
+      padding: 12px 16px;
+      border: 3px solid #eee;
+      border-radius: 12px;
+      font-size: 1rem;
+      font-family: inherit;
+      transition: border-color 0.3s;
+    }
+    .add-chore input:focus {
+      outline: none;
+      border-color: #4ECDC4;
+    }
+    .add-chore button {
+      padding: 12px 20px;
+      background: linear-gradient(135deg, #4ECDC4, #44A08D);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 1.2rem;
+      cursor: pointer;
+      font-family: inherit;
+      font-weight: 700;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .add-chore button:hover {
+      transform: scale(1.05);
+      box-shadow: 0 5px 15px rgba(78,205,196,0.4);
+    }
+    .chore-list {
+      min-height: 200px;
+    }
+    .chore-card {
+      background: white;
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin-bottom: 10px;
+      cursor: grab;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: transform 0.2s, box-shadow 0.2s;
+      border-left: 4px solid #4ECDC4;
+    }
+    .chore-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .chore-card.dragging {
+      opacity: 0.5;
+      transform: rotate(3deg);
+    }
+    .chore-card.completed {
+      background: #f0fdf4;
+      border-left-color: #6BCB77;
+    }
+    .chore-card.completed .chore-text {
+      text-decoration: line-through;
+      color: #999;
+    }
+    .chore-text {
+      font-size: 1.1rem;
+      color: #333;
+    }
+    .delete-btn {
+      background: #ffccc;
+      border: none;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s;
+    }
+    .delete-btn:hover {
+      background: #ff6b6b;
+      color: white;
+    }
+    .empty-state {
+      text-align: center;
+      color: #999;
+      padding: 40px 20px;
+      font-size: 1.1rem;
+    }
+    .confetti {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 1000;
+    }
+  </style>
+</head>
+<body>
+  <h1>🧹 Family Chore Board</h1>
+  <p class="subtitle">Let's get things done together!</p>
+  
+  <div class="progress-bar">
+    <div class="progress-fill" id="progress" style="width: 0%">0% Done</div>
+  </div>
+
+  <div class="board">
+    <div class="column todo">
+      <h2><span class="emoji">📋</span> To Do</h2>
+      <div class="add-chore">
+        <input type="text" id="newChore" placeholder="Add a new chore..." onkeypress="handleKeyPress(event)">
+        <button onclick="addChore()">+</button>
+      </div>
+      <div class="chore-list" id="todoList"></div>
+    </div>
+
+    <div class="column doing">
+      <h2><span class="emoji">🔨</span> Doing</h2>
+      <div class="chore-list" id="doingList"></div>
+    </div>
+
+    <div class="column done">
+      <h2><span class="emoji">🌟</span> Done!</h2>
+      <div class="chore-list" id="doneList"></div>
+    </div>
+  </div>
+
+  <canvas class="confetti" id="confetti"></canvas>
+
+  <script>
+    let chores = JSON.parse(localStorage.getItem('chores') || '[]');
+    
+    function saveChores() {
+      localStorage.setItem('chores', JSON.stringify(chores));
+    }
+    
+    function updateProgress() {
+      const total = chores.length;
+      const done = chores.filter(c => c.status === 'done').length;
+      const percent = total === 0 ? 0 : Math.round((done / total) * 100);
+      document.getElementById('progress').style.width = percent + '%';
+      document.getElementById('progress').textContent = total === 0 ? 'No chores yet!' : percent + '% Done';
+    }
+    
+    function renderChores() {
+      ['todo', 'doing', 'done'].forEach(status => {
+        const list = document.getElementById(status + 'List');
+        const filtered = chores.filter(c => c.status === status);
+        
+        if (filtered.length === 0) {
+          list.innerHTML = '<div class="empty-state">' + 
+            (status === 'todo' ? 'Add a chore to get started!' : 
+             status === 'doing' ? 'Nothing in progress yet' : 'Complete some chores!') + 
+            '</div>';
+        } else {
+          list.innerHTML = filtered.map(chore => `
+            <div class="chore-card ${chore.status === 'done' ? 'completed' : ''}" 
+                 draggable="true" 
+                 ondragstart="drag(event, '${chore.id}')"
+                 ondragend="dragEnd(event)">
+              <span class="chore-text">${chore.text}</span>
+              <button class="delete-btn" onclick="deleteChore('${chore.id}')">×</button>
+            </div>
+          `).join('');
+        }
+      });
+      updateProgress();
+    }
+    
+    function addChore() {
+      const input = document.getElementById('newChore');
+      const text = input.value.trim();
+      if (!text) return;
+      
+      chores.push({ id: Date.now().toString(), text, status: 'todo' });
+      saveChores();
+      renderChores();
+      input.value = '';
+      input.focus();
+    }
+    
+    function handleKeyPress(e) {
+      if (e.key === 'Enter') addChore();
+    }
+    
+    function deleteChore(id) {
+      chores = chores.filter(c => c.id !== id);
+      saveChores();
+      renderChores();
+    }
+    
+    function drag(ev, id) {
+      ev.dataTransfer.setData('text', id);
+      ev.target.classList.add('dragging');
+    }
+    
+    function dragEnd(ev) {
+      ev.target.classList.remove('dragging');
+    }
+    
+    ['todoList', 'doingList', 'doneList'].forEach(listId => {
+      const list = document.getElementById(listId);
+      list.addEventListener('dragover', e => e.preventDefault());
+      list.addEventListener('drop', e => {
+        e.preventDefault();
+        const id = e.dataTransfer.getData('text');
+        const newStatus = listId.replace('List', '');
+        const prevStatus = chores.find(c => c.id === id)?.status;
+        
+        chores = chores.map(c => c.id === id ? { ...c, status: newStatus } : c);
+        saveChores();
+        renderChores();
+        
+        if (newStatus === 'done' && prevStatus !== 'done') {
+          celebrate();
+        }
+      });
+    });
+    
+    function celebrate() {
+      const canvas = document.getElementById('confetti');
+      const ctx = canvas.getContext('2d');
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      
+      const confetti = [];
+      const colors = ['#FF6B6B', '#FFE66D', '#4ECDC4', '#6BCB77', '#FF9FFF'];
+      
+      for (let i = 0; i < 100; i++) {
+        confetti.push({
+          x: Math.random() * canvas.width,
+          y: Math.random() * canvas.height - canvas.height,
+          v: Math.random() * 3 + 2,
+          r: Math.random() * 6 + 4,
+          c: colors[Math.floor(Math.random() * colors.length)],
+          s: Math.random() * 0.5 + 0.5
+        });
+      }
+      
+      function animate() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        let stillFalling = false;
+        
+        confetti.forEach(c => {
+          c.y += c.v;
+          c.x += Math.sin(c.y * 0.02) * 0.5;
+          c.s *= 0.995;
+          
+          if (c.y < canvas.height) {
+            stillFalling = true;
+            ctx.beginPath();
+            ctx.arc(c.x, c.y, c.r, 0, Math.PI * 2);
+            ctx.fillStyle = c.c;
+            ctx.fill();
+          }
+        });
+        
+        if (stillFalling) requestAnimationFrame(animate);
+        else ctx.clearRect(0, 0, canvas.width, canvas.height);
+      }
+      
+      animate();
+    }
+    
+    renderChores();
+  </script>
+</body>
+</html>
