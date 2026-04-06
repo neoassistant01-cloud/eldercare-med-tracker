@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eldercare Medication Compliance Tracker</title>
+    <style>
+        :root {
+            --primary: #0d9488;
+            --primary-dark: #0f766e;
+            --primary-light: #14b8a6;
+            --bg: #f0fdfa;
+            --card-bg: #ffffff;
+            --text: #134e4a;
+            --text-light: #5eead4;
+            --border: #ccfbf1;
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
+        body { background: var(--bg); color: var(--text); min-height: 100vh; padding: 20px; }
+        .container { max-width: 1000px; margin: 0 auto; }
+        h1 { color: var(--primary-dark); text-align: center; margin-bottom: 8px; }
+        .subtitle { text-align: center; color: var(--primary); margin-bottom: 24px; }
+        
+        /* Tabs */
+        .tabs { display: flex; gap: 8px; margin-bottom: 24px; justify-content: center; }
+        .tab { padding: 12px 24px; background: var(--card-bg); border: 2px solid var(--primary); color: var(--primary); border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.2s; }
+        .tab:hover { background: var(--border); }
+        .tab.active { background: var(--primary); color: white; }
+        
+        /* Cards */
+        .card { background: var(--card-bg); border-radius: 12px; padding: 20px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(13,148,136,0.1); }
+        .card h2 { color: var(--primary-dark); font-size: 1.2rem; margin-bottom: 16px; border-bottom: 2px solid var(--border); padding-bottom: 8px; }
+        
+        /* Forms */
+        .form-row { display: flex; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+        .form-group { flex: 1; min-width: 150px; }
+        .form-group label { display: block; font-size: 0.85rem; margin-bottom: 4px; color: var(--primary-dark); }
+        input, select { width: 100%; padding: 10px; border: 2px solid var(--border); border-radius: 6px; font-size: 1rem; }
+        input:focus, select:focus { outline: none; border-color: var(--primary); }
+        
+        /* Buttons */
+        .btn { padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; transition: all 0.2s; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: var(--primary-dark); }
+        .btn-success { background: var(--success); color: white; }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-small { padding: 6px 12px; font-size: 0.85rem; }
+        
+        /* Lists */
+        .item-list { list-style: none; }
+        .item-list li { padding: 12px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+        .item-list li:hover { background: var(--bg); }
+        .item-info { flex: 1; }
+        .item-name { font-weight: 600; color: var(--text); }
+        .item-detail { font-size: 0.85rem; color: var(--primary); }
+        .item-actions { display: flex; gap: 8px; }
+        
+        /* Medication & Doses */
+        .med-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; background: var(--bg); }
+        .med-info { flex: 1; }
+        .med-name { font-weight: 600; }
+        .med-dosage { font-size: 0.9rem; color: var(--primary-dark); }
+        .med-time { font-size: 0.85rem; color: var(--primary); }
+        
+        /* Dose Log */
+        .dose-item { padding: 12px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+        .dose-given { background: #dcfce7; border-color: var(--success); }
+        .dose-missing { background: #fef2f2; border-color: var(--danger); }
+        .dose-pending { background: var(--bg); }
+        
+        /* Report */
+        .report-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 20px; }
+        .stat-card { background: var(--bg); padding: 20px; border-radius: 10px; text-align: center; border: 2px solid var(--border); }
+        .stat-value { font-size: 2rem; font-weight: 700; color: var(--primary-dark); }
+        .stat-label { font-size: 0.9rem; color: var(--primary); }
+        .compliance-bar { height: 24px; background: var(--border); border-radius: 12px; overflow: hidden; margin: 16px 0; }
+        .compliance-fill { height: 100%; background: linear-gradient(90deg, var(--primary), var(--success)); transition: width 0.3s; }
+        
+        /* Empty State */
+        .empty { text-align: center; padding: 40px; color: var(--primary); }
+        
+        /* Hidden */
+        .hidden { display: none; }
+        
+        /* Section visibility */
+        .section { display: none; }
+        .section.active { display: block; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>💊 Eldercare Medication Tracker</h1>
+        <p class="subtitle">Track medications & ensure compliance</p>
+        
+        <div class="tabs">
+            <button class="tab active" data-section="residents">Residents</button>
+            <button class="tab" data-section="medications">Medications</button>
+            <button class="tab" data-section="doses">Log Doses</button>
+            <button class="tab" data-section="report">Compliance Report</button>
+        </div>
+        
+        <!-- Residents Section -->
+        <div id="residents" class="section active">
+            <div class="card">
+                <h2>Add Resident</h2>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Name</label>
+                        <input type="text" id="residentName" placeholder="Enter name">
+                    </div>
+                    <div class="form-group">
+                        <label>Room #</label>
+                        <input type="text" id="residentRoom" placeholder="e.g., 101">
+                    </div>
+                    <div class="form-group" style="flex: 0; align-self: flex-end;">
+                        <button class="btn btn-primary" onclick="addResident()">Add</button>
+                    </div>
+                </div>
+            </div>
+            <div class="card">
+                <h2>Resident List</h2>
+                <ul class="item-list" id="residentList"></ul>
+            </div>
+        </div>
+        
+        <!-- Medications Section -->
+        <div id="medications" class="section">
+            <div class="card">
+                <h2>Add Medication</h2>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Resident</label>
+                        <select id="medResident"></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Medication Name</label>
+                        <input type="text" id="medName" placeholder="e.g., Aspirin">
+                    </div>
+                    <div class="form-group">
+                        <label>Dosage</label>
+                        <input type="text" id="medDosage" placeholder="e.g., 100mg">
+                    </div>
+                    <div class="form-group">
+                        <label>Time</label>
+                        <input type="time" id="medTime">
+                    </div>
+                    <div class="form-group" style="flex: 0; align-self: flex-end;">
+                        <button class="btn btn-primary" onclick="addMedication()">Add</button>
+                    </div>
+                </div>
+            </div>
+            <div class="card">
+                <h2>Medication Schedule</h2>
+                <div id="medList"></div>
+            </div>
+        </div>
+        
+        <!-- Doses Section -->
+        <div id="doses" class="section">
+            <div class="card">
+                <h2>Today's Doses</h2>
+                <div id="doseList"></div>
+            </div>
+        </div>
+        
+        <!-- Report Section -->
+        <div id="report" class="section">
+            <div class="card">
+                <h2>Compliance Report</h2>
+                <div class="report-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="totalDoses">0</div>
+                        <div class="stat-label">Total Doses</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="givenDoses">0</div>
+                        <div class="stat-label">Given On Time</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="missedDoses">0</div>
+                        <div class="stat-label">Missed</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="complianceRate">0%</div>
+                        <div class="stat-label">Compliance Rate</div>
+                    </div>
+                </div>
+                <div class="compliance-bar">
+                    <div class="compliance-fill" id="complianceBar" style="width: 0%"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Data
+        let residents = JSON.parse(localStorage.getItem('residents')) || [];
+        let medications = JSON.parse(localStorage.getItem('medications')) || [];
+        let doseLogs = JSON.parse(localStorage.getItem('doseLogs')) || [];
+        
+        // Save
+        function saveData() {
+            localStorage.setItem('residents', JSON.stringify(residents));
+            localStorage.setItem('medications', JSON.stringify(medications));
+            localStorage.setItem('doseLogs', JSON.stringify(doseLogs));
+        }
+        
+        // Tabs
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+                tab.classList.add('active');
+                document.getElementById(tab.dataset.section).classList.add('active');
+            });
+        });
+        
+        // Residents
+        function addResident() {
+            const name = document.getElementById('residentName').value.trim();
+            const room = document.getElementById('residentRoom').value.trim();
+            if (!name || !room) return alert('Please fill all fields');
+            
+            const resident = { id: Date.now(), name, room };
+            residents.push(resident);
+            saveData();
+            renderResidents();
+            updateMedResidentSelect();
+            document.getElementById('residentName').value = '';
+            document.getElementById('residentRoom').value = '';
+        }
+        
+        function deleteResident(id) {
+            residents = residents.filter(r => r.id !== id);
+            medications = medications.filter(m => m.residentId !== id);
+            saveData();
+            renderResidents();
+            renderMedications();
+            updateMedResidentSelect();
+        }
+        
+        function renderResidents() {
+            const list = document.getElementById('residentList');
+            if (residents.length === 0) {
+                list.innerHTML = '<div class="empty">No residents added yet</div>';
+                return;
+            }
+            list.innerHTML = residents.map(r => `
+                <li>
+                    <div class="item-info">
+                        <div class="item-name">${r.name}</div>
+                        <div class="item-detail">Room ${r.room}</div>
+                    </div>
+                    <div class="item-actions">
+                        <button class="btn btn-danger btn-small" onclick="deleteResident(${r.id})">Delete</button>
+                    </div>
+                </li>
+            `).join('');
+        }
+        
+        // Medications
+        function updateMedResidentSelect() {
+            const select = document.getElementById('medResident');
+            select.innerHTML = residents.map(r => `<option value="${r.id}">${r.name} (Room ${r.room})</option>`).join('');
+        }
+        
+        function addMedication() {
+            const residentId = parseInt(document.getElementById('medResident').value);
+            const name = document.getElementById('medName').value.trim();
+            const dosage = document.getElementById('medDosage').value.trim();
+            const time = document.getElementById('medTime').value;
+            
+            if (!name || !dosage || !time || !residentId) return alert('Please fill all fields');
+            
+            const resident = residents.find(r => r.id === residentId);
+            const med = { id: Date.now(), residentId, residentName: resident.name, name, dosage, time };
+            medications.push(med);
+            saveData();
+            renderMedications();
+            renderDoses();
+            document.getElementById('medName').value = '';
+            document.getElementById('medDosage').value = '';
+        }
+        
+        function deleteMedication(id) {
+            medications = medications.filter(m => m.id !== id);
+            saveData();
+            renderMedications();
+            renderDoses();
+        }
+        
+        function renderMedications() {
+            const list = document.getElementById('medList');
+            if (medications.length === 0) {
+                list.innerHTML = '<div class="empty">No medications scheduled</div>';
+                return;
+            }
+            list.innerHTML = medications.map(m => `
+                <div class="med-item">
+                    <div class="med-info">
+                        <div class="med-name">${m.name}</div>
+                        <div class="med-dosage">${m.dosage} - ${m.residentName}</div>
+                        <div class="med-time">🕐 ${m.time}</div>
+                    </div>
+                    <button class="btn btn-danger btn-small" onclick="deleteMedication(${m.id})">Delete</button>
+                </div>
+            `).join('');
+        }
+        
+        // Doses
+        function renderDoses() {
+            const list = document.getElementById('doseList');
+            const today = new Date().toDateString();
+            
+            if (medications.length === 0) {
+                list.innerHTML = '<div class="empty">No medications to log</div>';
+                return;
+            }
+            
+            list.innerHTML = medications.map(m => {
+                const log = doseLogs.find(l => l.medId === m.id && l.date === today);
+                const status = log ? 'dose-given' : 'dose-pending';
+                const btn = log ? 
+                    `<span style="color: var(--success); font-weight: 600;">✓ Given at ${log.time}</span>` :
+                    `<button class="btn btn-success btn-small" onclick="logDose(${m.id})">Mark as Given</button>`;
+                
+                return `
+                    <div class="dose-item ${status}">
+                        <div class="med-info">
+                            <div class="med-name">${m.name}</div>
+                            <div class="med-dosage">${m.dosage} - ${m.residentName}</div>
+                            <div class="med-time">🕐 ${m.time}</div>
+                        </div>
+                        ${btn}
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function logDose(medId) {
+            const today = new Date().toDateString();
+            const now = new Date();
+            const time = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+            
+            const existing = doseLogs.findIndex(l => l.medId === medId && l.date === today);
+            if (existing >= 0) {
+                doseLogs[existing].time = time;
+            } else {
+                doseLogs.push({ medId, date: today, time });
+            }
+            saveData();
+            renderDoses();
+            renderReport();
+        }
+        
+        // Report
+        function renderReport() {
+            const today = new Date().toDateString();
+            const todayLogs = doseLogs.filter(l => l.date === today);
+            const total = medications.length;
+            const given = todayLogs.length;
+            const missed = total - given;
+            const rate = total > 0 ? Math.round((given / total) * 100) : 0;
+            
+            document.getElementById('totalDoses').textContent = total;
+            document.getElementById('givenDoses').textContent = given;
+            document.getElementById('missedDoses').textContent = missed;
+            document.getElementById('complianceRate').textContent = rate + '%';
+            document.getElementById('complianceBar').style.width = rate + '%';
+        }
+        
+        // Init
+        renderResidents();
+        updateMedResidentSelect();
+        renderMedications();
+        renderDoses();
+        renderReport();
+    </script>
+</body>
+</html>
